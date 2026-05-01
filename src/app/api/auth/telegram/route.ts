@@ -31,7 +31,10 @@ export async function POST(req: Request) {
   }
 
   if (!(await isAdmin(data.id))) {
-    return NextResponse.json({ ok: false, error: "not_admin" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "not_admin", user_id: data.id, username: data.username ?? null },
+      { status: 403 },
+    );
   }
 
   const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || null;

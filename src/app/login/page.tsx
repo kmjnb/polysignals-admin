@@ -44,7 +44,10 @@ export default function LoginPage({
                       if (r.ok) { window.location.href = '/'; }
                       else {
                         const data = await r.json().catch(() => ({}));
-                        window.location.href = '/login?error=' + (data.error || 'unknown');
+                        const params = new URLSearchParams({ error: data.error || 'unknown' });
+                        if (data.user_id) params.set('user_id', String(data.user_id));
+                        if (data.username) params.set('username', String(data.username));
+                        window.location.href = '/login?' + params.toString();
                       }
                     });
                   }
@@ -65,7 +68,7 @@ export default function LoginPage({
 async function ErrorBanner({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; user_id?: string; username?: string }>;
 }) {
   const sp = await searchParams;
   if (!sp.error) return null;
@@ -76,8 +79,14 @@ async function ErrorBanner({
     bad_payload: "Некорректные данные от Telegram.",
   };
   return (
-    <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-      {map[sp.error] ?? `Ошибка: ${sp.error}`}
+    <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 space-y-1">
+      <div>{map[sp.error] ?? `Ошибка: ${sp.error}`}</div>
+      {sp.user_id ? (
+        <div className="text-xs text-red-300/80">
+          Telegram id: <code>{sp.user_id}</code>
+          {sp.username ? ` (@${sp.username})` : ""}
+        </div>
+      ) : null}
     </div>
   );
 }
