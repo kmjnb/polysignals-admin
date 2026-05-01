@@ -1,4 +1,4 @@
-FROM huecker.io/library/node:20-alpine AS base
+FROM m.daocloud.io/docker.io/library/node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 FROM base AS builder
