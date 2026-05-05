@@ -118,12 +118,24 @@ export default async function UsersPage({
                 return (
                   <tr key={r.userId} className="border-b border-neutral-800/60 hover:bg-neutral-800/40">
                     <Td className="text-neutral-100 max-w-[28ch]">
-                      <div className="truncate">{display}</div>
+                      <Link
+                        href={`/users/${r.userId}`}
+                        className="hover:underline underline-offset-2"
+                      >
+                        <div className="truncate">{display}</div>
+                      </Link>
                       {r.username && r.fullName ? (
                         <div className="text-xs text-neutral-500 truncate">@{r.username}</div>
                       ) : null}
                     </Td>
-                    <Td className="text-neutral-400 tabular-nums">{r.userId}</Td>
+                    <Td className="text-neutral-400 tabular-nums">
+                      <Link
+                        href={`/users/${r.userId}`}
+                        className="hover:underline underline-offset-2"
+                      >
+                        {r.userId}
+                      </Link>
+                    </Td>
                     <Td className="text-neutral-500 uppercase">{r.languageCode || "—"}</Td>
                     <Td className="text-neutral-300 tabular-nums">
                       {subs ? (
