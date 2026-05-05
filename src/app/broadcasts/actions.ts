@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { Agent, Dispatcher, ProxyAgent } from "undici";
 
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/admin-guard";
@@ -76,11 +77,17 @@ export async function uploadMediaAction(formData: FormData): Promise<UploadResul
 
   let data: { ok: boolean; description?: string; result?: unknown };
   try {
+    const dispatcher: Dispatcher = env.BOT_PROXY_URL
+      ? new ProxyAgent(env.BOT_PROXY_URL)
+      : new Agent();
+    // Node's global fetch is backed by undici; pass dispatcher via the (typed-loose) init.
     const res = await fetch(`${TG_API}/bot${token}/${method}`, {
       method: "POST",
       body: tgForm,
+      // @ts-expect-error undici accepts dispatcher; lib.dom.d.ts types don't expose it
+      dispatcher,
     });
-    data = await res.json();
+    data = (await res.json()) as typeof data;
   } catch (e) {
     return { ok: false, error: `Сеть: ${(e as Error).message}` };
   }
