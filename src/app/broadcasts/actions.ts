@@ -48,8 +48,12 @@ function pickFileId(type: MediaType, result: unknown): string | undefined {
 
 export async function uploadMediaAction(formData: FormData): Promise<UploadResult> {
   await requireAdmin();
-  const token = env.BOT_TOKEN;
-  if (!token) return { ok: false, error: "BOT_TOKEN не настроен в admin" };
+  const token = env.BROADCAST_BOT_TOKEN;
+  if (!token)
+    return {
+      ok: false,
+      error: "BROADCAST_BOT_TOKEN не настроен (нужен токен бота, который рассылает)",
+    };
   const stash = env.PRIMARY_ADMIN_USER_ID;
   if (!stash)
     return {
