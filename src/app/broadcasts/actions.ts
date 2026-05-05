@@ -79,12 +79,12 @@ export async function uploadMediaAction(formData: FormData): Promise<UploadResul
   tgForm.append("disable_notification", "true");
   tgForm.append(field, file, file.name);
 
+  const dispatcher: Dispatcher = env.BOT_PROXY_URL
+    ? new ProxyAgent(env.BOT_PROXY_URL)
+    : new Agent();
+
   let data: { ok: boolean; description?: string; result?: unknown };
   try {
-    const dispatcher: Dispatcher = env.BOT_PROXY_URL
-      ? new ProxyAgent(env.BOT_PROXY_URL)
-      : new Agent();
-    // Node's global fetch is backed by undici; pass dispatcher via the (typed-loose) init.
     const res = await fetch(`${TG_API}/bot${token}/${method}`, {
       method: "POST",
       body: tgForm,
@@ -101,6 +101,25 @@ export async function uploadMediaAction(formData: FormData): Promise<UploadResul
   const fileId = pickFileId(type, data.result);
   if (!fileId)
     return { ok: false, error: "Bot API не вернул file_id" };
+
+  // Best-effort delete the stash copy so the owner's chat with the bot
+  // doesn't accumulate pre-broadcast preview messages. file_id stays valid
+  // on Telegram CDN even after the source message is removed.
+  const messageId = (data.result as { message_id?: number } | null)?.message_id;
+  if (messageId) {
+    try {
+      await fetch(`${TG_API}/bot${token}/deleteMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: stash, message_id: messageId }),
+        // @ts-expect-error undici dispatcher
+        dispatcher,
+      });
+    } catch {
+      // ignore — the file_id is what we needed
+    }
+  }
+
   return { ok: true, type, fileId, fileName: file.name };
 }
 
