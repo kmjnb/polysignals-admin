@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { AdminShell } from "@/components/admin-shell";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/admin-guard";
+import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,58 @@ async function refundSubscription(formData: FormData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return;
+
+  const [sub] = await db
+    .select({
+      id: schema.subscriptions.id,
+      userId: schema.subscriptions.userId,
+      telegramChargeId: schema.subscriptions.telegramChargeId,
+      status: schema.subscriptions.status,
+    })
+    .from(schema.subscriptions)
+    .where(eq(schema.subscriptions.id, id))
+    .limit(1);
+
+  if (!sub) return;
+  if (sub.status === "refunded") {
+    revalidatePath("/subscriptions");
+    return;
+  }
+
+  let refundError: string | null = null;
+  if (sub.telegramChargeId && env.BOT_TOKEN) {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${env.BOT_TOKEN}/refundStarPayment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: Number(sub.userId),
+            telegram_payment_charge_id: sub.telegramChargeId,
+          }),
+        },
+      );
+      const data = (await res.json().catch(() => null)) as
+        | { ok: boolean; description?: string }
+        | null;
+      if (!data?.ok) {
+        refundError = data?.description || `HTTP ${res.status}`;
+      }
+    } catch (e) {
+      refundError = e instanceof Error ? e.message : String(e);
+    }
+  } else if (!sub.telegramChargeId) {
+    refundError = "no telegram_charge_id stored";
+  } else {
+    refundError = "BOT_TOKEN not configured";
+  }
+
+  if (refundError) {
+    console.warn(`[refund] sub=${id}: ${refundError}`);
+    return;
+  }
+
   await db
     .update(schema.subscriptions)
     .set({ status: "refunded" })
