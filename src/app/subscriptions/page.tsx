@@ -76,11 +76,15 @@ async function refundSubscription(formData: FormData) {
     return;
   }
 
+  // Refund must come from the bot that received the Stars (bizlogger),
+  // not the admin login bot. BROADCAST_BOT_TOKEN already represents the
+  // bizlogger bot (broadcasts go through the same token).
+  const refundToken = env.BROADCAST_BOT_TOKEN;
   let refundError: string | null = null;
-  if (sub.telegramChargeId && env.BOT_TOKEN) {
+  if (sub.telegramChargeId && refundToken) {
     try {
       const res = await fetch(
-        `https://api.telegram.org/bot${env.BOT_TOKEN}/refundStarPayment`,
+        `https://api.telegram.org/bot${refundToken}/refundStarPayment`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -102,7 +106,7 @@ async function refundSubscription(formData: FormData) {
   } else if (!sub.telegramChargeId) {
     refundError = "no telegram_charge_id stored";
   } else {
-    refundError = "BOT_TOKEN not configured";
+    refundError = "BROADCAST_BOT_TOKEN not configured";
   }
 
   if (refundError) {

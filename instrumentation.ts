@@ -5,7 +5,9 @@ export const onRequestError: Instrumentation.onRequestError = async (
   request,
   context,
 ) => {
-  const token = process.env.BOT_TOKEN;
+  // Use the bizlogger/broadcast bot — admin has /start'd it. The admin
+  // login bot exists only for OAuth and may not have a DM session open.
+  const token = process.env.BROADCAST_BOT_TOKEN || process.env.BOT_TOKEN;
   const adminChatId = process.env.ADMIN_CHAT_ID;
   if (!token || !adminChatId) {
     console.error("[onRequestError]", err, request, context);
